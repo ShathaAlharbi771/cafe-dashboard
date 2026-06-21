@@ -64,6 +64,13 @@ div[data-testid="stVerticalBlockBorderWrapper"] { background:#fff; border:none !
 .news-top b { color:#2B3245; font-size:.9rem; font-weight:600; }
 .news-top .t { color:#9aa3b5; font-size:.78rem; }
 .news-sub { color:#8A93A6; font-size:.82rem; }
+/* Insights */
+.ins-h { color:#8A93A6; font-weight:600; font-size:.82rem; text-transform:uppercase; letter-spacing:.04em; }
+.ins-v { color:#2B3245; font-weight:700; font-size:1.45rem; margin:.25rem 0 .15rem; }
+.ins-n { color:#8A93A6; font-size:.84rem; }
+.recs { margin:.2rem 0 0; padding-left:1.1rem; }
+.recs li { color:#54607a; font-size:.92rem; margin:.4rem 0; }
+.recs b { color:#2B3245; }
 #MainMenu, footer, header { visibility:hidden; }
 </style>
 """
@@ -238,6 +245,67 @@ with g3:
                      f"<span class='t'>{r['Transaction Date'].date()}</span></div>"
                      f"<div class='news-sub'>${r['Total Spent']:,.2f} · {r['Payment Method']}</div></div>")
         st.markdown(html, unsafe_allow_html=True)
+
+# ------------------------------------------------------------------
+# Business Insights
+# ------------------------------------------------------------------
+st.markdown("<div style='height:.4rem'></div>", unsafe_allow_html=True)
+st.markdown("<div class='title' style='font-size:1.3rem'>💡 Business Insights</div>", unsafe_allow_html=True)
+
+if len(f):
+    item_rev = f.groupby("Item")["Total Spent"].sum()
+    top_item = item_rev.idxmax()
+    top_item_share = item_rev.max() / item_rev.sum() * 100
+
+    day_rev = f.groupby("Weekday")["Total Spent"].sum()
+    order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    day_rev = day_rev.reindex([d for d in order if d in day_rev.index])
+    peak_day, slow_day = day_rev.idxmax(), day_rev.idxmin()
+
+    mon_rev = f.groupby("Month")["Total Spent"].sum()
+    peak_month = pd.to_datetime(mon_rev.idxmax()).strftime("%B")
+
+    pay = f["Payment Method"].replace("Unknown", pd.NA).dropna()
+    top_pay = pay.value_counts().idxmax() if len(pay) else "—"
+    top_pay_share = (pay.value_counts().max() / len(pay) * 100) if len(pay) else 0
+
+    loc = f["Location"].replace("Unknown", pd.NA).dropna()
+    top_loc = loc.value_counts().idxmax() if len(loc) else "—"
+
+    aov = f["Total Spent"].mean()
+
+    insights = [
+        ("🏆", "Best seller", top_item, f"drives {top_item_share:.0f}% of total revenue"),
+        ("📅", "Peak day", peak_day, f"highest revenue; {slow_day} is the slowest"),
+        ("🗓️", "Peak month", peak_month, "strongest sales month in range"),
+        ("💳", "Preferred payment", top_pay, f"{top_pay_share:.0f}% of known-method orders"),
+        ("📍", "Top location", top_loc, "leading sales channel"),
+        ("🧾", "Avg. order value", f"${aov:,.2f}", "per transaction"),
+    ]
+
+    cols = st.columns(3)
+    for i, (icon, label, value, note) in enumerate(insights):
+        with cols[i % 3]:
+            with st.container(border=True):
+                st.markdown(
+                    f"<div class='ins'><div class='ins-h'>{icon}&nbsp; {label}</div>"
+                    f"<div class='ins-v'>{value}</div>"
+                    f"<div class='ins-n'>{note}</div></div>",
+                    unsafe_allow_html=True,
+                )
+
+    # Quick recommendations
+    recs = [
+        f"Promote <b>{top_item}</b> bundles — it already carries {top_item_share:.0f}% of revenue.",
+        f"Run staffing & offers around <b>{peak_day}</b>; test promotions on <b>{slow_day}</b> to lift the slow day.",
+        f"Most customers pay via <b>{top_pay}</b> — keep that checkout fast and consider loyalty perks there.",
+    ]
+    with st.container(border=True):
+        st.markdown("<div class='card-h'>Recommendations</div>", unsafe_allow_html=True)
+        st.markdown("<ul class='recs'>" + "".join(f"<li>{r}</li>" for r in recs) + "</ul>",
+                    unsafe_allow_html=True)
+else:
+    st.info("No data for the selected filters.")
 
 # ------------------------------------------------------------------
 # Raw data
