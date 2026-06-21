@@ -33,16 +33,20 @@ st.markdown(
       .block-container { padding: 1.4rem 1.8rem 3rem; max-width: 1500px; }
 
       /* ---- Sidebar ---- */
-      section[data-testid="stSidebar"] { background: #5f6e8e; }
-      section[data-testid="stSidebar"] * { color: #eaf0fa !important; }
-      .brand { font-weight: 700; letter-spacing: .14em; font-size: 1.15rem; color:#fff;
-               padding: .4rem 0 1.4rem; }
-      .nav a { display:flex; align-items:center; gap:.7rem; padding:.55rem .2rem;
-               font-weight:500; color:#dfe6f2; text-decoration:none; font-size:.98rem; }
-      .nav a.active { color:#9fd2ff; }
-      .nav .ico { width:1.4rem; text-align:center; }
-      .navhead { color:#aeb9d0 !important; font-size:.72rem; letter-spacing:.12em;
-                 text-transform:uppercase; margin:1.4rem 0 .4rem; }
+      section[data-testid="stSidebar"] { background: linear-gradient(180deg,#5f6e8e,#516086); }
+      section[data-testid="stSidebar"] label { color:#eaf0fa !important; font-weight:600 !important;
+               font-size:.86rem !important; }
+      .brand { font-weight: 700; letter-spacing: .14em; font-size: 1.2rem; color:#fff;
+               padding: .6rem .2rem 1rem; border-bottom:1px solid rgba(255,255,255,.14); margin-bottom:.6rem; }
+      .navhead { color:#c2cce0; font-size:.72rem; letter-spacing:.14em;
+                 text-transform:uppercase; margin:.8rem 0 1rem; font-weight:600; }
+      /* filter inputs: clean white pills */
+      section[data-testid="stSidebar"] [data-baseweb="select"] > div,
+      section[data-testid="stSidebar"] [data-baseweb="input"] {
+        background:#fff !important; border:1px solid rgba(255,255,255,.25) !important;
+        border-radius:10px !important; }
+      section[data-testid="stSidebar"] [data-baseweb="tag"] { background:#2D9CDB !important; }
+      section[data-testid="stSidebar"] [data-baseweb="tag"] span { color:#fff !important; }
 
       /* ---- Top bar ---- */
       .topbar { display:flex; align-items:center; justify-content:space-between;
@@ -114,20 +118,7 @@ df = load_data()
 # ------------------------------------------------------------------
 with st.sidebar:
     st.markdown("<div class='brand'>☕ DASHBOARD</div>", unsafe_allow_html=True)
-    st.markdown(
-        """
-        <div class='nav'>
-          <a class='active'><span class='ico'>🏠</span>Home</a>
-          <a><span class='ico'>📊</span>Charts</a>
-          <a><span class='ico'>⭐</span>Favorites</a>
-          <a><span class='ico'>💬</span>Chat</a>
-          <a><span class='ico'>⚙️</span>Setting</a>
-          <a><span class='ico'>❓</span>Help</a>
-        </div>
-        <div class='navhead'>Filters</div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.markdown("<div class='navhead'>Filters</div>", unsafe_allow_html=True)
     sel_items = st.multiselect("Item", sorted(df["Item"].unique()), default=sorted(df["Item"].unique()))
     sel_locs = st.multiselect("Location", sorted(df["Location"].unique()), default=sorted(df["Location"].unique()))
     min_d, max_d = df["Transaction Date"].min(), df["Transaction Date"].max()
@@ -158,9 +149,15 @@ def blank(fig, height):
     return fig
 
 
+def rgba(hexc, a):
+    h = hexc.lstrip("#")
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return f"rgba({r},{g},{b},{a})"
+
+
 def sparkline(series, color):
     fig = go.Figure(go.Scatter(y=series, mode="lines", line=dict(color=color, width=2.5),
-                               fill="tozeroy", fillcolor=color + "33"))
+                               fill="tozeroy", fillcolor=rgba(color, 0.20)))
     return blank(fig, 90)
 
 
