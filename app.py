@@ -30,6 +30,7 @@ CSS = """
 html, body, [class*="css"], .stApp { font-family: 'Poppins', system-ui, sans-serif; }
 .stApp { background: #D8E4F2; }
 .block-container { padding: 1.4rem 1.8rem 3rem; max-width: 1500px; }
+.title { font-weight:700; font-size:1.7rem; color:#2B3245; margin:.2rem 0 .1rem; }
 /* Sidebar */
 section[data-testid="stSidebar"] { background: linear-gradient(180deg,#5f6e8e,#516086); }
 section[data-testid="stSidebar"] label { color:#eaf0fa !important; font-weight:600 !important; font-size:.86rem !important; }
@@ -91,30 +92,27 @@ def load_data(path: str = "clean_cafe_sales.csv") -> pd.DataFrame:
 df = load_data()
 
 # ------------------------------------------------------------------
-# Sidebar — nav (visual) + real filters
+# Header + filters (inside the dashboard)
 # ------------------------------------------------------------------
-with st.sidebar:
-    st.markdown("<div class='brand'>☕ DASHBOARD</div>", unsafe_allow_html=True)
-    st.markdown("<div class='navhead'>Filters</div>", unsafe_allow_html=True)
-    sel_items = st.multiselect("Item", sorted(df["Item"].unique()), default=sorted(df["Item"].unique()))
-    sel_locs = st.multiselect("Location", sorted(df["Location"].unique()), default=sorted(df["Location"].unique()))
-    min_d, max_d = df["Transaction Date"].min(), df["Transaction Date"].max()
-    date_range = st.date_input("Date range", [min_d, max_d], min_value=min_d, max_value=max_d)
+st.markdown("<div class='title'>☕ Cafe Sales Dashboard</div>", unsafe_allow_html=True)
+st.markdown("<div class='crumb'>Dashboard &nbsp;&rsaquo;&nbsp; <span>Cafe Sales</span></div>", unsafe_allow_html=True)
+
+with st.container(border=True):
+    fc1, fc2, fc3 = st.columns(3)
+    with fc1:
+        sel_items = st.multiselect("Item", sorted(df["Item"].unique()), default=sorted(df["Item"].unique()))
+    with fc2:
+        sel_locs = st.multiselect("Location", sorted(df["Location"].unique()), default=sorted(df["Location"].unique()))
+    with fc3:
+        min_d, max_d = df["Transaction Date"].min(), df["Transaction Date"].max()
+        date_range = st.date_input("Date range", [min_d, max_d], min_value=min_d, max_value=max_d)
 
 f = df[df["Item"].isin(sel_items) & df["Location"].isin(sel_locs)]
 if len(date_range) == 2:
     s, e = pd.to_datetime(date_range[0]), pd.to_datetime(date_range[1])
     f = f[(f["Transaction Date"] >= s) & (f["Transaction Date"] <= e)]
 
-# ------------------------------------------------------------------
-# Top bar + breadcrumb
-# ------------------------------------------------------------------
-st.markdown(
-    "<div class='topbar'><div class='search'>🔍&nbsp; Search…</div>"
-    "<div class='hi'>Hi, John&nbsp; 👤</div></div>",
-    unsafe_allow_html=True,
-)
-st.markdown("<div class='crumb'>Dashboard &nbsp;&rsaquo;&nbsp; <span>Cafe Sales</span></div>", unsafe_allow_html=True)
+st.markdown("<div style='height:.6rem'></div>", unsafe_allow_html=True)
 
 # ------------------------------------------------------------------
 # Helpers
