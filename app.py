@@ -1,84 +1,91 @@
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 # ------------------------------------------------------------------
 # Page config
 # ------------------------------------------------------------------
-st.set_page_config(page_title="Cafe Sales Dashboard", page_icon="☕", layout="wide")
+st.set_page_config(page_title="Cafe Dashboard", page_icon="☕", layout="wide")
 
 # ------------------------------------------------------------------
-# Design tokens
+# Palette (matches the admin-template look)
 # ------------------------------------------------------------------
-INK = "#16191D"
-MUTED = "#5C6470"
-ACCENT = "#0E7C66"  # committed teal — avoids the coffee/cream cliché
-# Cohesive categorical palette (teal-led, balanced warm/cool)
-PALETTE = ["#0E7C66", "#E0A33E", "#3E5C76", "#C2557A", "#7A9E6E", "#9B6BB0", "#D9694A"]
+BLUE = "#2D9CDB"
+ORANGE = "#F5A623"
+GREEN = "#27AE60"
+YELLOW = "#F2C94C"
+RED = "#EB5757"
+PURPLE = "#9B51E0"
+INK = "#2B3245"
+MUTED = "#8A93A6"
+BARS = [RED, BLUE, YELLOW, GREEN, PURPLE, ORANGE]
 
 # ------------------------------------------------------------------
-# Global styling (fonts, layout, cards, sidebar)
+# Global CSS
 # ------------------------------------------------------------------
 st.markdown(
     """
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-      html, body, [class*="css"], .stApp { font-family: 'Inter', system-ui, sans-serif; }
-      .stApp { background: #F3F4F6; }
-      .block-container { padding-top: 2.2rem; padding-bottom: 3rem; max-width: 1300px; }
+      html, body, [class*="css"], .stApp { font-family: 'Poppins', system-ui, sans-serif; }
+      .stApp { background: #D8E4F2; }
+      .block-container { padding: 1.4rem 1.8rem 3rem; max-width: 1500px; }
 
-      /* Header */
-      .app-title { font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(2rem, 4vw, 3rem);
-                   color: #16191D; letter-spacing: -0.02em; margin: 0; line-height: 1.05; }
-      .app-sub { color: #5C6470; font-size: 1rem; margin: .35rem 0 0; }
-      .rule { height: 1px; background: rgba(22,25,29,.10); border: 0; margin: 1.4rem 0 1.8rem; }
+      /* ---- Sidebar ---- */
+      section[data-testid="stSidebar"] { background: #5f6e8e; }
+      section[data-testid="stSidebar"] * { color: #eaf0fa !important; }
+      .brand { font-weight: 700; letter-spacing: .14em; font-size: 1.15rem; color:#fff;
+               padding: .4rem 0 1.4rem; }
+      .nav a { display:flex; align-items:center; gap:.7rem; padding:.55rem .2rem;
+               font-weight:500; color:#dfe6f2; text-decoration:none; font-size:.98rem; }
+      .nav a.active { color:#9fd2ff; }
+      .nav .ico { width:1.4rem; text-align:center; }
+      .navhead { color:#aeb9d0 !important; font-size:.72rem; letter-spacing:.12em;
+                 text-transform:uppercase; margin:1.4rem 0 .4rem; }
 
-      /* Section headings */
-      .sec { font-family: 'Inter'; font-weight: 600; font-size: 1.05rem; color: #16191D;
-             margin: .2rem 0 .6rem; letter-spacing: -0.01em; }
+      /* ---- Top bar ---- */
+      .topbar { display:flex; align-items:center; justify-content:space-between;
+                background:#eef3fb; border-radius:12px; padding:.7rem 1.1rem; margin-bottom:.4rem;
+                box-shadow:0 4px 14px rgba(31,45,80,.06); }
+      .search { flex:1; max-width:520px; background:#fff; border-radius:20px; padding:.5rem 1.1rem;
+                color:#9aa3b5; border:1px solid #e3e9f3; }
+      .hi { color:#5f6e8e; font-weight:600; }
+      .crumb { color:#5f6e8e; font-weight:600; margin:.6rem 0 1rem; }
+      .crumb span { color:#9aa3b5; font-weight:500; }
 
-      /* Metric cards */
-      div[data-testid="stMetric"] {
-        background: #FFFFFF; border: 1px solid rgba(22,25,29,.08); border-radius: 16px;
-        padding: 1.1rem 1.25rem; box-shadow: 0 1px 2px rgba(16,24,40,.04);
+      /* ---- Cards ---- */
+      div[data-testid="stVerticalBlockBorderWrapper"] {
+        background:#fff; border:none !important; border-radius:12px;
+        box-shadow:0 8px 22px rgba(31,45,80,.08); padding:1.05rem 1.25rem;
       }
-      div[data-testid="stMetricLabel"] p { color: #5C6470; font-weight: 500; font-size: .82rem;
-        text-transform: uppercase; letter-spacing: .04em; }
-      div[data-testid="stMetricValue"] { color: #16191D; font-weight: 700; }
+      .card-h { color:#54607a; font-weight:600; font-size:1.02rem; margin:.1rem 0 .8rem; }
 
-      /* Sidebar */
-      section[data-testid="stSidebar"] { background: #FFFFFF; border-right: 1px solid rgba(22,25,29,.08); }
-      section[data-testid="stSidebar"] h2 { font-family: 'Inter'; font-weight: 600; }
+      /* ---- KPI ---- */
+      .kpi-h { color:#54607a; font-weight:600; font-size:1rem; text-align:center; }
+      .kpi-v { font-weight:700; font-size:2.1rem; text-align:center; line-height:1.2; }
+      .kpi-s { color:#9aa3b5; font-size:.8rem; text-align:center; margin-bottom:.2rem; }
 
-      /* Chart cards */
-      div[data-testid="stPlotlyChart"] {
-        background: #FFFFFF; border: 1px solid rgba(22,25,29,.08); border-radius: 16px;
-        padding: .5rem .25rem; box-shadow: 0 1px 2px rgba(16,24,40,.04);
-      }
-      #MainMenu, footer { visibility: hidden; }
+      /* ---- Progress list ---- */
+      .pg-label { display:flex; justify-content:space-between; font-size:.86rem;
+                  color:#54607a; margin:.55rem 0 .25rem; font-weight:500; }
+      .pg-label b { color:#2B3245; font-weight:600; }
+      .track { height:8px; background:#eef1f6; border-radius:6px; overflow:hidden; }
+      .fill  { height:8px; border-radius:6px; }
+
+      /* ---- Recent list ---- */
+      .news { padding:.55rem 0; border-bottom:1px solid #eef1f6; }
+      .news:last-child { border-bottom:0; }
+      .news-top { display:flex; justify-content:space-between; }
+      .news-top b { color:#2B3245; font-size:.9rem; font-weight:600; }
+      .news-top .t { color:#9aa3b5; font-size:.78rem; }
+      .news-sub { color:#8A93A6; font-size:.82rem; }
+
+      #MainMenu, footer, header { visibility:hidden; }
     </style>
     """,
     unsafe_allow_html=True,
 )
-
-
-def style_fig(fig, height=340):
-    """Apply a cohesive, restrained look to a Plotly figure."""
-    fig.update_layout(
-        height=height,
-        margin=dict(l=10, r=10, t=30, b=10),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Inter, sans-serif", color=INK, size=13),
-        title=None,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0, font=dict(size=12)),
-        hoverlabel=dict(font_family="Inter", bgcolor="white"),
-    )
-    fig.update_xaxes(showgrid=False, zeroline=False, linecolor="rgba(22,25,29,.15)")
-    fig.update_yaxes(showgrid=True, gridcolor="rgba(22,25,29,.06)", zeroline=False)
-    return fig
-
 
 # ------------------------------------------------------------------
 # Data
@@ -93,6 +100,7 @@ def load_data(path: str = "clean_cafe_sales.csv") -> pd.DataFrame:
     df["Transaction Date"] = pd.to_datetime(df["Transaction Date"], errors="coerce")
     df = df.dropna(subset=["Transaction Date", "Total Spent"])
     df["Month"] = df["Transaction Date"].dt.to_period("M").astype(str)
+    df["MonthLbl"] = df["Transaction Date"].dt.strftime("%b")
     df["Weekday"] = df["Transaction Date"].dt.day_name()
     for col in ["Item", "Payment Method", "Location"]:
         df[col] = df[col].fillna("Unknown").replace("", "Unknown")
@@ -102,99 +110,168 @@ def load_data(path: str = "clean_cafe_sales.csv") -> pd.DataFrame:
 df = load_data()
 
 # ------------------------------------------------------------------
-# Sidebar filters
+# Sidebar — nav (visual) + real filters
 # ------------------------------------------------------------------
-st.sidebar.markdown("## Filters")
-sel_items = st.sidebar.multiselect("Item", sorted(df["Item"].unique()), default=sorted(df["Item"].unique()))
-sel_pays = st.sidebar.multiselect("Payment method", sorted(df["Payment Method"].unique()), default=sorted(df["Payment Method"].unique()))
-sel_locs = st.sidebar.multiselect("Location", sorted(df["Location"].unique()), default=sorted(df["Location"].unique()))
-min_d, max_d = df["Transaction Date"].min(), df["Transaction Date"].max()
-date_range = st.sidebar.date_input("Date range", [min_d, max_d], min_value=min_d, max_value=max_d)
+with st.sidebar:
+    st.markdown("<div class='brand'>☕ DASHBOARD</div>", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class='nav'>
+          <a class='active'><span class='ico'>🏠</span>Home</a>
+          <a><span class='ico'>📊</span>Charts</a>
+          <a><span class='ico'>⭐</span>Favorites</a>
+          <a><span class='ico'>💬</span>Chat</a>
+          <a><span class='ico'>⚙️</span>Setting</a>
+          <a><span class='ico'>❓</span>Help</a>
+        </div>
+        <div class='navhead'>Filters</div>
+        """,
+        unsafe_allow_html=True,
+    )
+    sel_items = st.multiselect("Item", sorted(df["Item"].unique()), default=sorted(df["Item"].unique()))
+    sel_locs = st.multiselect("Location", sorted(df["Location"].unique()), default=sorted(df["Location"].unique()))
+    min_d, max_d = df["Transaction Date"].min(), df["Transaction Date"].max()
+    date_range = st.date_input("Date range", [min_d, max_d], min_value=min_d, max_value=max_d)
 
-f = df[df["Item"].isin(sel_items) & df["Payment Method"].isin(sel_pays) & df["Location"].isin(sel_locs)]
+f = df[df["Item"].isin(sel_items) & df["Location"].isin(sel_locs)]
 if len(date_range) == 2:
-    start, end = pd.to_datetime(date_range[0]), pd.to_datetime(date_range[1])
-    f = f[(f["Transaction Date"] >= start) & (f["Transaction Date"] <= end)]
+    s, e = pd.to_datetime(date_range[0]), pd.to_datetime(date_range[1])
+    f = f[(f["Transaction Date"] >= s) & (f["Transaction Date"] <= e)]
 
 # ------------------------------------------------------------------
-# Header
+# Top bar + breadcrumb
 # ------------------------------------------------------------------
 st.markdown(
-    "<div><h1 class='app-title'>☕ Cafe Sales Dashboard</h1>"
-    "<p class='app-sub'>Interactive analysis of 2023 transactions</p></div>",
+    "<div class='topbar'><div class='search'>🔍&nbsp; Search…</div>"
+    "<div class='hi'>Hi, John&nbsp; 👤</div></div>",
     unsafe_allow_html=True,
 )
-st.markdown("<hr class='rule'>", unsafe_allow_html=True)
+st.markdown("<div class='crumb'>Dashboard &nbsp;&rsaquo;&nbsp; <span>Cafe Sales</span></div>", unsafe_allow_html=True)
 
 # ------------------------------------------------------------------
-# KPIs
+# Helpers
 # ------------------------------------------------------------------
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("Total revenue", f"${f['Total Spent'].sum():,.0f}")
-c2.metric("Transactions", f"{len(f):,}")
-c3.metric("Avg. order value", f"${f['Total Spent'].mean():,.2f}" if len(f) else "$0")
-c4.metric("Units sold", f"{f['Quantity'].sum():,.0f}")
+def blank(fig, height):
+    fig.update_layout(height=height, margin=dict(l=0, r=0, t=0, b=0),
+                      paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                      showlegend=False, xaxis=dict(visible=False), yaxis=dict(visible=False))
+    return fig
 
-st.markdown("<div style='height:1.4rem'></div>", unsafe_allow_html=True)
 
-# ------------------------------------------------------------------
-# Row 1 — revenue by item + payment mix
-# ------------------------------------------------------------------
-col1, col2 = st.columns([1.3, 1])
-with col1:
-    st.markdown("<p class='sec'>Revenue by item</p>", unsafe_allow_html=True)
-    by_item = f.groupby("Item")["Total Spent"].sum().sort_values().reset_index()
-    fig = px.bar(by_item, x="Total Spent", y="Item", orientation="h", text_auto=".2s")
-    fig.update_traces(marker_color=ACCENT, textposition="outside", cliponaxis=False)
-    st.plotly_chart(style_fig(fig), use_container_width=True)
+def sparkline(series, color):
+    fig = go.Figure(go.Scatter(y=series, mode="lines", line=dict(color=color, width=2.5),
+                               fill="tozeroy", fillcolor=color + "33"))
+    return blank(fig, 90)
 
-with col2:
-    st.markdown("<p class='sec'>Payment method mix</p>", unsafe_allow_html=True)
-    by_pay = f.groupby("Payment Method")["Total Spent"].sum().reset_index()
-    fig = px.pie(by_pay, values="Total Spent", names="Payment Method", hole=0.55,
-                 color_discrete_sequence=PALETTE)
-    fig.update_traces(textinfo="percent", textfont_size=13)
-    st.plotly_chart(style_fig(fig), use_container_width=True)
 
 # ------------------------------------------------------------------
-# Row 2 — monthly trend
+# Row 1 — detailed line chart + top items
 # ------------------------------------------------------------------
-st.markdown("<p class='sec'>Monthly revenue trend</p>", unsafe_allow_html=True)
-by_month = f.groupby("Month")["Total Spent"].sum().reset_index()
-fig = px.area(by_month, x="Month", y="Total Spent", markers=True)
-fig.update_traces(line_color=ACCENT, fillcolor="rgba(14,124,102,.10)",
-                  marker=dict(size=7, color=ACCENT))
-st.plotly_chart(style_fig(fig, height=320), use_container_width=True)
+monthly = (f.groupby("Month")
+             .agg(rev=("Total Spent", "sum"), cnt=("Total Spent", "size"), qty=("Quantity", "sum"))
+             .reset_index())
+monthly["lbl"] = pd.to_datetime(monthly["Month"]).dt.strftime("%b")
+
+r1c1, r1c2 = st.columns([2, 1])
+with r1c1:
+    with st.container(border=True):
+        st.markdown("<div class='card-h'>Monthly Revenue</div>", unsafe_allow_html=True)
+        fig = go.Figure(go.Scatter(x=monthly["lbl"], y=monthly["rev"], mode="lines+markers",
+                                   line=dict(color=ORANGE, width=3),
+                                   marker=dict(color=BLUE, size=9)))
+        fig.update_layout(height=330, margin=dict(l=10, r=10, t=10, b=10),
+                          paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                          font=dict(family="Poppins", color=MUTED, size=12))
+        fig.update_xaxes(showgrid=False, linecolor="#e6ebf3")
+        fig.update_yaxes(showgrid=True, griddash="dot", gridcolor="#e6ebf3", zeroline=False)
+        st.plotly_chart(fig, use_container_width=True)
+
+with r1c2:
+    with st.container(border=True):
+        st.markdown("<div class='card-h'>Top Items by Revenue</div>", unsafe_allow_html=True)
+        top = f.groupby("Item")["Total Spent"].sum().sort_values(ascending=False).head(6)
+        mx = top.max() if len(top) else 1
+        html = ""
+        for i, (name, val) in enumerate(top.items()):
+            pct = val / mx * 100
+            html += (f"<div class='pg-label'><b>{name}</b><span>${val:,.0f}</span></div>"
+                     f"<div class='track'><div class='fill' style='width:{pct:.0f}%;"
+                     f"background:{BARS[i % len(BARS)]}'></div></div>")
+        st.markdown(html, unsafe_allow_html=True)
 
 # ------------------------------------------------------------------
-# Row 3 — location + weekday
+# Row 2 — KPI cards with sparklines
 # ------------------------------------------------------------------
-col3, col4 = st.columns(2)
-with col3:
-    st.markdown("<p class='sec'>Revenue by location</p>", unsafe_allow_html=True)
-    by_loc = f.groupby("Location")["Total Spent"].sum().reset_index()
-    fig = px.bar(by_loc, x="Location", y="Total Spent", text_auto=".2s", color="Location",
-                 color_discrete_sequence=PALETTE)
-    fig.update_traces(textposition="outside", cliponaxis=False)
-    fig.update_layout(showlegend=False)
-    st.plotly_chart(style_fig(fig), use_container_width=True)
-
-with col4:
-    st.markdown("<p class='sec'>Revenue by weekday</p>", unsafe_allow_html=True)
-    order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    by_day = f.groupby("Weekday")["Total Spent"].sum().reindex(order).reset_index()
-    fig = px.bar(by_day, x="Weekday", y="Total Spent", text_auto=".2s")
-    fig.update_traces(marker_color=ACCENT, textposition="outside", cliponaxis=False)
-    st.plotly_chart(style_fig(fig), use_container_width=True)
+k1, k2, k3 = st.columns(3)
+kpis = [
+    (k1, "Revenue", f"${f['Total Spent'].sum():,.0f}", BLUE, monthly["rev"], "total sales"),
+    (k2, "Transactions", f"{len(f):,}", ORANGE, monthly["cnt"], "orders placed"),
+    (k3, "Units Sold", f"{f['Quantity'].sum():,.0f}", GREEN, monthly["qty"], "items sold"),
+]
+for col, label, value, color, series, sub in kpis:
+    with col:
+        with st.container(border=True):
+            st.markdown(
+                f"<div class='kpi-h'>{label}</div>"
+                f"<div class='kpi-v' style='color:{color}'>{value}</div>"
+                f"<div class='kpi-s'>{sub}</div>",
+                unsafe_allow_html=True,
+            )
+            st.plotly_chart(sparkline(series, color), use_container_width=True,
+                            config={"displayModeBar": False})
 
 # ------------------------------------------------------------------
-# Data table
+# Row 3 — gauge + bar chart + recent list
+# ------------------------------------------------------------------
+g1, g2, g3 = st.columns([1, 1.4, 1.1])
+
+with g1:
+    with st.container(border=True):
+        st.markdown("<div class='card-h'>Top Item Share</div>", unsafe_allow_html=True)
+        item_rev = f.groupby("Item")["Total Spent"].sum()
+        share = (item_rev.max() / item_rev.sum() * 100) if item_rev.sum() else 0
+        fig = go.Figure(go.Indicator(
+            mode="gauge+number", value=share, number={"suffix": "%", "font": {"size": 34, "color": INK}},
+            gauge={"axis": {"range": [0, 100], "tickwidth": 0, "tickcolor": MUTED},
+                   "bar": {"color": INK, "thickness": 0.18},
+                   "steps": [{"range": [0, 33], "color": RED}, {"range": [33, 66], "color": ORANGE},
+                             {"range": [66, 100], "color": GREEN}]}))
+        fig.update_layout(height=240, margin=dict(l=20, r=20, t=10, b=0),
+                          paper_bgcolor="rgba(0,0,0,0)", font=dict(family="Poppins"))
+        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+with g2:
+    with st.container(border=True):
+        st.markdown("<div class='card-h'>Revenue by Weekday</div>", unsafe_allow_html=True)
+        order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        by_day = f.groupby("Weekday")["Total Spent"].sum().reindex(order).reset_index()
+        by_day["lbl"] = by_day["Weekday"].str[:3]
+        fig = px.bar(by_day, x="lbl", y="Total Spent")
+        fig.update_traces(marker_color=[BARS[i % len(BARS)] for i in range(len(by_day))],
+                          marker_line_width=0)
+        fig.update_layout(height=240, margin=dict(l=10, r=10, t=10, b=10),
+                          paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                          font=dict(family="Poppins", color=MUTED, size=12))
+        fig.update_xaxes(showgrid=False, title=None, linecolor="#e6ebf3")
+        fig.update_yaxes(showgrid=True, griddash="dot", gridcolor="#e6ebf3", title=None, zeroline=False)
+        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+with g3:
+    with st.container(border=True):
+        st.markdown("<div class='card-h'>Recent Transactions</div>", unsafe_allow_html=True)
+        recent = f.sort_values("Transaction Date", ascending=False).head(5)
+        html = ""
+        for _, r in recent.iterrows():
+            html += (f"<div class='news'><div class='news-top'><b>{r['Item']} · {r['Location']}</b>"
+                     f"<span class='t'>{r['Transaction Date'].date()}</span></div>"
+                     f"<div class='news-sub'>${r['Total Spent']:,.2f} · {r['Payment Method']}</div></div>")
+        st.markdown(html, unsafe_allow_html=True)
+
+# ------------------------------------------------------------------
+# Raw data
 # ------------------------------------------------------------------
 with st.expander("View raw data"):
     st.dataframe(f, use_container_width=True)
-    st.download_button(
-        "Download filtered data (CSV)",
-        f.to_csv(index=False).encode("utf-8-sig"),
-        "filtered_cafe_sales.csv",
-        "text/csv",
-    )
+    st.download_button("Download filtered data (CSV)",
+                       f.to_csv(index=False).encode("utf-8-sig"),
+                       "filtered_cafe_sales.csv", "text/csv")
