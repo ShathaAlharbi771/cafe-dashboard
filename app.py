@@ -206,7 +206,7 @@ g1, g2, g3 = st.columns([1, 1.4, 1.1])
 
 with g1:
     with st.container(border=True):
-        st.markdown("<div class='card-h'>Top Item Share</div>", unsafe_allow_html=True)
+        st.markdown("<div class='card-h'>Top Item Revenue Share</div>", unsafe_allow_html=True)
         item_rev = f.groupby("Item")["Total Spent"].sum()
         share = (item_rev.max() / item_rev.sum() * 100) if item_rev.sum() else 0
         fig = go.Figure(go.Indicator(
@@ -294,16 +294,6 @@ if len(f):
                     unsafe_allow_html=True,
                 )
 
-    # Quick recommendations
-    recs = [
-        f"Promote <b>{top_item}</b> bundles — it already carries {top_item_share:.0f}% of revenue.",
-        f"Run staffing & offers around <b>{peak_day}</b>; test promotions on <b>{slow_day}</b> to lift the slow day.",
-        f"Most customers pay via <b>{top_pay}</b> — keep that checkout fast and consider loyalty perks there.",
-    ]
-    with st.container(border=True):
-        st.markdown("<div class='card-h'>Recommendations</div>", unsafe_allow_html=True)
-        st.markdown("<ul class='recs'>" + "".join(f"<li>{r}</li>" for r in recs) + "</ul>",
-                    unsafe_allow_html=True)
 else:
     st.info("No data for the selected filters.")
 
